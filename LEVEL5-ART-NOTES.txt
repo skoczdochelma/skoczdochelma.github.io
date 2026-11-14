@@ -1,0 +1,42 @@
+TRAFFIC VEHICLE ART
+Generated with the built-in image generation tool as an original sprite atlas.
+Asset: assets/traffic-vehicles.png
+Reference: blue/white/black Chelm NesoBus, photographed during Lublin testing.
+https://www.dziennikwschodni.pl/artykul/372607,wodorowe-autobusy-trafily-na-lubelskie-ulice-to-testy-dla-chelma
+https://static2.dziennikwschodni.pl/data/wysiwig/archive/media/news/2025/2025-03/bb45cc4f1bcdd6e41e911db069594227-v3.jpg
+Photo used only as a visual reference; source photo is not included in the game.
+Cars are unbranded designs inspired by Golf Mk5, BMW E46, Audi A4 B7 Avant,
+and Mercedes W211 shapes from 2000-2010. No affiliation or endorsement implied.
+
+Generation brief: production pixel-art vehicle sprite atlas on transparent
+background for a 1990s-style Frogger game; five isolated right-facing vehicles,
+long axes horizontal, elevated view with roofs and sides visible. NesoBus from
+the supplied photo: blue lower panels and roof, white belt, black window band,
+three doors, rooftop hydrogen housing and silver wheels. Four unbranded cars:
+muted red compact hatchback, steel-blue sports sedan, silver-green estate,
+champagne executive sedan. Period-appropriate headlights, trim, wheels, glass.
+No logos, brand badges, text, license numbers, road, scenery or extra objects.
+Game draws atlas regions at their native proportions and mirrors traffic for
+the opposite direction. Road, tickets and street furniture are canvas artwork.
+
+SUPPLEMENTARY VEHICLES (revision 50)
+Built-in image generation; existing traffic atlas used as the visual reference.
+New asset: assets/traffic-extra.png. Original atlas remains unchanged.
+Prompt: A new supplementary transparent pixel-art sprite atlas matching the
+existing elevated side-view, right-facing game vehicles. Exactly four separate
+rows: purple 2002 Opel Corsa C-inspired three-door hatchback; green 2004 VW
+Touareg-inspired SUV; orange-red 2003 Audi TT-inspired coupe; charcoal 2007
+Mercedes Vito-inspired passenger van. Distinct period silhouettes, roof and
+side visible, clear wheel centers and silver rims. All unbranded, no logos,
+badges, lettering, number plates, road, scenery, grid or extra objects.
+Only wheel-rim regions of the atlas are rotated during rendering.
+
+CYCLIST (revision 51)
+Asset: assets/cyclist.png. Generated with built-in image generation.
+Prompt: Single adult urban cyclist riding RIGHT, entirely visible on transparent
+background, detailed 1990s pixel art matching the elevated side-view cars. Teal
+jacket, beige trousers, muted red helmet, navy city bicycle, silver spokes and
+black tires. Hands on handlebars, feet on pedals, natural adult proportions,
+clear circular wheels for code animation. Warm limited palette and dark pixel
+outlines; no lettering, logos, road, scenery, duplicates or extra objects.
+The game draws the sprite in both directions and animates spoke highlights.
