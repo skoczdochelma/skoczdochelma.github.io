@@ -7,7 +7,7 @@ const officeArt=new Image();officeArt.src='assets/starostwo-16bit.png';
 const plazaArt=new Image();plazaArt.src='assets/luczkowski-evening-16bit.png';
 const W=768,H=432,keys=new Set();
 let WORLD=6400;
-function targetCount(){return rockPositions.length;}
+function targetCount(){return level===9?10:rockPositions.length;}
 function gateX(){return WORLD-105;}
 const townLedges=[[180,310,160],[390,244,90],[550,182,180],[800,300,190],[1030,232,85],[1190,278,175],[1510,308,170],[1730,238,90],[1890,174,185],[2150,254,160],[2370,314,190],[2610,246,85],[2780,286,175]];
 let platforms=[{x:0,y:374,w:650,h:60},{x:730,y:374,w:650,h:60},{x:1470,y:374,w:650,h:60},{x:2210,y:374,w:990,h:60},...townLedges.map(([x,y,w])=>({x,y,w,h:18}))];
@@ -133,7 +133,7 @@ function nearLadder(){return ladders.find(l=>Math.abs(player.x+player.w/2-l.x)<1
 function makeLadders(){return platforms.filter(p=>p.h<=20&&!p.travel&&p.ladderOffset!==undefined).map(p=>({x:p.x+p.ladderOffset,top:p.y,bottom:level!==1?400:374}));}
 let level=0,transition=0,chapterStart=0,banner=0;
 function upShouldJump(){const ladder=nearLadder();return !ladder||((player.ground||coyote>0)&&player.y+player.h<=ladder.top+3);}
-function loadLevel(n){level=n;document.body.classList.add('taller-town');const data=chapters[n];WORLD=data.width||3200;platforms=data.platforms;rockPositions=data.rockPositions;ghostDefs=data.ghostDefs;ladders=makeLadders();reset();if(n===4)resetRoad();document.body.classList.toggle('road-level',n===4);$('.control-legend').textContent=n===4?'✚ CROSS / WAIT':'✚ MOVE / CLIMB';banner=n?4:0;$('#chapter').textContent='CHEŁM, POLAND · LEVEL 0'+(n+1);$('#chapterNumber').textContent='0'+(n+1);$('#kicker').textContent='LEVEL 0'+(n+1)+' · '+chapterNames[n];updateDevLevelButtons();}
+function loadLevel(n){level=n;document.body.classList.add('taller-town');const data=chapters[n];WORLD=data.width||3200;platforms=data.platforms;rockPositions=data.rockPositions;ghostDefs=data.ghostDefs;ladders=makeLadders();reset();if(n===4)resetRoad();if(n===9)resetFinale();document.body.classList.toggle('road-level',n===4);$('.control-legend').textContent=n===4?'✚ CROSS / WAIT':n===9?'✚ MOVE / SPACE JUMP':'✚ MOVE / CLIMB';banner=n?4:0;$('#chapter').textContent='CHEŁM, POLAND · LEVEL 0'+(n+1);$('#chapterNumber').textContent='0'+(n+1);$('#kicker').textContent='LEVEL 0'+(n+1)+' · '+chapterNames[n];updateDevLevelButtons();}
 function restartLevel(){unlockAudio();if(state==='won'||state==='title'){elapsed=chapterStart=0;loadLevel(0);}else{elapsed=chapterStart;loadLevel(level);}state='playing';$('#overlay').hidden=true;canvas.focus();}
 let player,rocks,particles=[],camera=0,time=0,elapsed=0,state='title',lives=3,collected=0,checkpoint=false,invincible=0,coyote=0,jumpBuffer=0,last=0,acc=0,sound=true,audioCtx;
 const $=s=>document.querySelector(s);
@@ -219,6 +219,7 @@ return balanceMusic(buffer);
 }
 // Original themes: "Chalk Echoes" and "Paperwork Parade".
 function buildStageMusic(ac,stage){
+if(stage===9)return buildFinaleMusic(ac);
 if(stage===8)return buildParkMusic(ac);
 if(stage===7)return buildDiscoveryMusic(ac);
 if(stage===6)return buildCinemaMusic(ac);
@@ -280,23 +281,23 @@ for(let bar=0;bar<bars;bar++){const root=roots[bar%4],start=bar*4*beat;
 for(let step=0;step<8;step++){const t=start+step*.5*beat;voice(melodies[bar%4][step]+(bar>=8?12:0),t,beat*.30,.012);voice(root+(step%2?12:0),t+beat*.25,beat*.21,.013,true);voice(root+12+[0,4,7,12][step%4],t,beat*.16,.004);drum(t,2);if(step%2===0)drum(t,0);if(step%4===2)drum(t,1);}}
 return balanceMusic(buffer);}
 function stopMusic(reset=false){if(musicSource){musicOffset=(musicOffset+audioCtx.currentTime-musicStarted)%musicBuffer.duration;const source=musicSource,gain=musicGain;musicSource=musicGain=null;gain.gain.cancelScheduledValues(audioCtx.currentTime);gain.gain.setTargetAtTime(0,audioCtx.currentTime,.008);source.stop(audioCtx.currentTime+.04);source.onended=()=>{source.disconnect();gain.disconnect();};}if(reset)musicOffset=0;}
-function syncMusic(){const shouldPlay=musicEnabled&&sound&&state==='playing'&&audioCtx&&audioCtx.state==='running';if(!shouldPlay){stopMusic(state==='transition'||state==='won');return;}if(musicSource)return;
-musicBuffer=musicBuffers[level]??=buildMusicBuffer(audioCtx,level);musicGain=audioCtx.createGain();musicGain.gain.setValueAtTime(0,audioCtx.currentTime);musicGain.gain.linearRampToValueAtTime(1,audioCtx.currentTime+.12);musicGain.connect(audioCtx.destination);musicSource=audioCtx.createBufferSource();musicSource.buffer=musicBuffer;musicSource.loop=true;musicSource.connect(musicGain);musicStarted=audioCtx.currentTime;musicSource.start(0,musicOffset);}
+function syncMusic(){const shouldPlay=musicEnabled&&sound&&(state==='playing'||(level===9&&bossDefeated&&!victoryDismissed&&(state==='boss-falling'||state==='won')))&&audioCtx&&audioCtx.state==='running';if(!shouldPlay){stopMusic(state==='transition'||state==='won');return;}if(musicSource)return;
+const track=level===9&&bossDefeated?10:level;musicBuffer=musicBuffers[track]??=(track===10?buildFinaleMusic(audioCtx,true):buildMusicBuffer(audioCtx,level));musicGain=audioCtx.createGain();musicGain.gain.setValueAtTime(0,audioCtx.currentTime);musicGain.gain.linearRampToValueAtTime(1,audioCtx.currentTime+.12);musicGain.connect(audioCtx.destination);musicSource=audioCtx.createBufferSource();musicSource.buffer=musicBuffer;musicSource.loop=true;musicSource.connect(musicGain);musicStarted=audioCtx.currentTime;musicSource.start(0,musicOffset);}
 // Keep the music gain steady while effects play; repeated ducking sounded like stutter.
 
 function tone(freq,end,duration,type='square',delay=0,volume=.04){if(!sound)return;try{unlockAudio();if(!audioCtx)return;const t=audioCtx.currentTime+delay,o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);o.frequency.exponentialRampToValueAtTime(end,t+duration);g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(volume,t+.008);g.gain.exponentialRampToValueAtTime(.001,t+duration);o.connect(g);g.connect(audioCtx.destination);o.start(t);o.stop(t+duration+.01);o.onended=()=>{o.disconnect();g.disconnect();};}catch{}}
 function beep(freq,duration=.08,type='square'){tone(freq,freq*.6,duration,type);}
 function jumpSound(){tone(190,740,.16,'square',0,.035);tone(380,1050,.12,'triangle',.035,.025);}
 function collectSound(){tone(1046,1046,.10,'triangle',0,.075);tone(1568,1568,.18,'square',.065,.025);tone(2093,2093,.22,'sine',.12,.04);}
-function hud(){ $('#itemLabel').textContent=itemNames[level];canvas.setAttribute('aria-label',chapterNames[level]+': collect '+targetCount()+' '+itemNames[level].toLowerCase()+(level===4?' and cross four traffic lanes and outer bike lanes to the bus stop. Arrow keys or WASD move; the median is safe.':' and reach the gate'));$('#rocks').textContent=String(collected).padStart(2,'0')+' / '+targetCount();$('#hearts').textContent='♥ '.repeat(lives)+'· '.repeat(3-lives);$('#status').textContent=checkpoint?['BASILICA HILL','DEEP GALLERIES','PLAC NIEPODLEGŁOŚCI','AT THE WELL','SAFE MEDIAN','AQUAPARK GARDENS','CINEMA FORECOURT','CHALK ENTRANCE','PARK CLEARING'][level]:chapterNames[level];}
-function reset(){stopMusic(true);for(const p of platforms)if(p.travel){p.y=p.baseY;if(p.baseX!==undefined)p.x=p.baseX;}player={x:50,y:330,w:22,h:30,vx:0,vy:0,ground:false,face:1};rocks=rockPositions.map(([x,y])=>{const support=platforms.find(p=>p.travel&&x>=p.x&&x<=p.x+p.w&&y===p.baseY-24);return {x,y,animationPhase:x,taken:false,support,offsetX:support?x-support.x:0};});particles=[];camera=time=collected=0;lives=3;checkpoint=false;invincible=0;coyote=jumpBuffer=0;transition=0;climbing=false;climbCooldown=0;keys.clear();hud();}
+function hud(){ $('#itemLabel').textContent=itemNames[level];canvas.setAttribute('aria-label',chapterNames[level]+': collect '+targetCount()+' '+itemNames[level].toLowerCase()+(level===4?' and cross four traffic lanes and outer bike lanes to the bus stop. Arrow keys or WASD move; the median is safe.':' and reach the gate'));$('#rocks').textContent=String(collected).padStart(2,'0')+' / '+targetCount();$('#hearts').textContent='♥ '.repeat(lives)+'· '.repeat(3-lives);$('#status').textContent=checkpoint?['BASILICA HILL','DEEP GALLERIES','PLAC NIEPODLEGŁOŚCI','AT THE WELL','SAFE MEDIAN','AQUAPARK GARDENS','CINEMA FORECOURT','CHALK ENTRANCE','PARK CLEARING','FINAL CHAMBER'][level]:chapterNames[level];if(level===9)canvas.setAttribute('aria-label','Final chamber: collect 10 chalk fragments from changing platforms to defeat the Chalk Guardian.');}
+function reset(){stopMusic(true);bossDefeated=bossGone=victoryDismissed=false;for(const p of platforms)if(p.travel){p.y=p.baseY;if(p.baseX!==undefined)p.x=p.baseX;}player={x:50,y:330,w:22,h:30,vx:0,vy:0,ground:false,face:1};rocks=rockPositions.map(([x,y])=>{const support=platforms.find(p=>p.travel&&x>=p.x&&x<=p.x+p.w&&y===p.baseY-24);return {x,y,animationPhase:x,taken:false,support,offsetX:support?x-support.x:0};});particles=[];camera=time=collected=0;lives=3;checkpoint=false;invincible=0;coyote=jumpBuffer=0;transition=0;climbing=false;climbCooldown=0;keys.clear();hud();}
 function start(){unlockAudio();if(state==='paused'){state='playing';$('#overlay').hidden=true;return;}restartLevel();}
 function overlay(title,description,button){$('#message').textContent=title;$('#description').textContent=description;$('#start').textContent=button;$('#overlay').hidden=false;}
 function gameOverSound(){tone(392,392,.16,'sine',.20,.022);tone(330,330,.18,'sine',.34,.019);tone(262,247,.40,'triangle',.50,.014);}
 function pauseSound(){tone(660,660,.09,'sine',0,.018);tone(440,440,.14,'sine',.075,.014);}
 function pause(){if(state==='playing'){state='paused';pauseSound();keys.clear();overlay('A moment to catch your breath.','Your adventure is paused.','RESUME →');}else if(state==='paused'){state='playing';$('#overlay').hidden=true;}}
 function burst(x,y,color){for(let i=0;i<10;i++)particles.push({x,y,vx:(Math.random()-.5)*130,vy:-Math.random()*130,t:.5,color});}
-function hit(){if(invincible>0)return;releaseGameInput();lives--;beep(100,.25,'sawtooth');burst(player.x,player.y,'#fff1ce');hud();if(lives===0){state='over';gameOverSound();overlay(['The clergy caught you.','The sheets got you.','The office workers caught you.','The tourists caught you.','Traffic caught you.','The lifeguards caught you.','The directors called cut!','The miners caught you.','The park thugs caught you.'][level],'A fresh trail and three new hearts await.','TRY AGAIN →');return;}player.x=checkpoint?(WORLD/2+10):50;player.y=330;player.vx=player.vy=0;climbing=false;climbCooldown=.3;invincible=2;}
+function hit(){if(invincible>0)return;releaseGameInput();lives--;beep(100,.25,'sawtooth');burst(player.x,player.y,'#fff1ce');hud();if(lives===0){state='over';gameOverSound();overlay(['The clergy caught you.','The sheets got you.','The office workers caught you.','The tourists caught you.','Traffic caught you.','The lifeguards caught you.','The directors called cut!','The miners caught you.','The park thugs caught you.','The cave spirits caught you.'][level],'A fresh trail and three new hearts await.','TRY AGAIN →');return;}player.x=checkpoint?(WORLD/2+10):50;player.y=330;player.vx=player.vy=0;climbing=false;climbCooldown=.3;invincible=2;}
 function ghosts(){if(level===1)return ghostDefs.map((g,i)=>({x:g.x+Math.sin(time*g.s+i)*g.r,y:g.y+Math.sin(time*2+i)*9,w:26,h:29,kind:'ghost'}));
 return chapters[level].walkers.map(g=>{const span=g.right-g.left,phase=(time*g.speed+g.phase*span*2)%(span*2),forward=phase<span;return {x:g.left+(forward?phase:span*2-phase),y:g.floor-38,w:26,h:38,face:forward?1:-1,kind:g.kind||(level===0?'priest':'worker')};});}
 function overlap(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;}
@@ -326,13 +327,13 @@ const riding=player.ground&&Math.abs(player.y+player.h-oldY)<1&&player.x+player.
 if(p.axis==='x')p.x=p.baseX+delta;else p.y=p.baseY+delta;
 if(riding){player.x+=p.x-oldX;player.y+=p.y-oldY;}
 }for(const r of rocks)if(r.support){r.x=r.support.x+r.offsetX;r.y=r.support.y-24;}}
-function update(dt){if(level===4&&state!=='transition'){updateRoad(dt);return;}if(state==='playing')time+=dt;if(state==='transition'){transition-=dt;if(transition<=0){chapterStart=elapsed;loadLevel(level+1);state='playing';}return;}if(state!=='playing')return;banner=Math.max(0,banner-dt);elapsed+=dt;invincible=Math.max(0,invincible-dt);jumpBuffer=Math.max(0,jumpBuffer-dt);coyote=player.ground?.1:Math.max(0,coyote-dt);moveLifts();movePlayer(dt);
+function update(dt){if(level===9){updateFinale(dt);return;}if(level===4&&state!=='transition'){updateRoad(dt);return;}if(state==='playing')time+=dt;if(state==='transition'){transition-=dt;if(transition<=0){chapterStart=elapsed;loadLevel(level+1);state='playing';}return;}if(state!=='playing')return;banner=Math.max(0,banner-dt);elapsed+=dt;invincible=Math.max(0,invincible-dt);jumpBuffer=Math.max(0,jumpBuffer-dt);coyote=player.ground?.1:Math.max(0,coyote-dt);moveLifts();movePlayer(dt);
 if(player.y>H+60){invincible=0;hit();}for(const r of rocks)if(!r.taken&&overlap(player,{x:r.x-7,y:r.y-9,w:14,h:18})){r.taken=true;collected++;collectSound();burst(r.x,r.y,itemColors[level]);hud();}
 if(player.x>(WORLD/2-20)&&!checkpoint){checkpoint=true;beep(660,.2);hud();burst(WORLD/2,330,'#caff79');}
 for(const g of ghosts())if(overlap({x:player.x+3,y:player.y+3,w:16,h:25},{x:g.x+4,y:g.y+(g.kind==='ghost'?4:3),w:18,h:g.kind==='ghost'?22:g.h-5})){hit();break;}
 if(overlap(player,{x:gateX(),y:level!==1?321:295,w:52,h:79})&&collected===targetCount()&&state==='playing'){
 beep(1040,.4,'triangle');keys.clear();
-if(level<chapters.length-1){state='transition';transition=1.2;player.vx=0;}else{state='won';overlay('A quiet moment in Chełm.','All nine chapters complete! All medallions, chalk pieces, papers, drinks, maps, tickets, liferings, film reels and leaves collected in '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+'.','PLAY AGAIN →');}}
+if(level<chapters.length-1){state='transition';transition=1.2;player.vx=0;}else{state='won';overlay('A quiet moment in Chełm.','All ten chapters complete! All medallions, chalk pieces, papers, drinks, maps, tickets, liferings, film reels and leaves collected in '+Math.floor(elapsed/60)+':'+String(Math.floor(elapsed%60)).padStart(2,'0')+'.','PLAY AGAIN →');}}
 
 camera=Math.max(0,Math.min(WORLD-W,player.x-W*.35));for(const p of particles){p.t-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=300*dt;}particles=particles.filter(p=>p.t>0);}
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(Math.round(x),Math.round(y),w,h);}
@@ -386,7 +387,7 @@ rect(xx,y+h-1,w,1,'#6b302c');
 if(w>8&&h>4){rect(xx+3,y+3,3,1,'#c76a50');rect(xx+w-5,y+5,2,1,'#7b352d');}
 }
 rect(p.x,p.y,p.w,1,'#df9673');rect(p.x,p.y+height-1,p.w,1,'#542c2b');
-if(p.travel)label(p.axis==='x'?'↔':'↕',p.x+p.w/2-3,p.y+height+13,'#ffdc8c');
+
 }
 function timberPlatform(p){
 rect(p.x,p.y,p.w,p.h,'#493634');
@@ -412,9 +413,10 @@ function renderPlatform(p){const anchor=Math.round(p.baseY??p.y),anchorX=Math.ro
 const local={...p,x:anchorX,y:anchor};ctx.save();
 if(level===1){const outline=chalkOutline(local);ctx.beginPath();outline.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();}
 platform(local);platformDetails(local);ctx.restore();
-if(p.travel&&level!==0)label(p.axis==='x'?'↔':'↕',local.x+p.w/2-3,anchor+p.h+13,'#ffdc8c');ctx.restore();
+ctx.restore();
 }
 function platform(p){
+if(level===9){chalkPlatform(p);return;}
 if(level===8){benchPlatform(p);return;}
 if(level===7){mineBeam(p);return;}
 if(level===6){trussPlatform(p);return;}
@@ -438,12 +440,13 @@ for(let i=0;i<30;i++){const x=((i*137-camera*.31)%W+W)%W,y=60+(i*53)%300+Math.si
 // Subtle drifting ground mist stays below the playing surface.
 for(let i=0;i<3;i++){ctx.fillStyle='#b4dce10a';ctx.beginPath();ctx.ellipse(170+i*290+Math.sin(time*.3+i)*25,406,230,15,0,0,Math.PI*2);ctx.fill();}}
 function noise(x,y){let v=Math.sin(x*127.1+y*311.7)*43758.5453;return v-Math.floor(v);}
-function chalkOutline(p){const tall=p.h>20||p.shapePiece,depth=p.shapePiece?p.h:(tall?p.h:25),points=[[p.x,p.y],[p.x+p.w,p.y]];
-for(let x=p.x+p.w;x>=p.x;x-=12)points.push([x,p.y+depth+(tall?0:Math.floor(noise(x,p.y)*9)-4)]);points.push([p.x,p.y+depth]);return points;}
+function chalkOutline(p){const tall=p.h>20||p.shapePiece,depth=p.shapePiece?p.h:(tall?p.h:25),bottom=p.y+depth,rough=p.shapePiece||!tall,points=[[p.x,p.y],[p.x+p.w,p.y]];
+const edge=x=>bottom+(rough?Math.floor(noise(x,bottom)*9)-4:0);
+points.push([p.x+p.w,edge(p.x+p.w)]);for(let x=Math.floor((p.x+p.w)/12)*12;x>p.x;x-=12)points.push([x,edge(x)]);points.push([p.x,edge(p.x)]);return points;}
 function chalkPlatform(p){
 const tall=p.h>20||p.shapePiece,depth=p.shapePiece?p.h:(tall?p.h:25),points=chalkOutline(p);
 poly(ctx,points,'#536d87');
-const inner=[[p.x,p.y+2],[p.x+p.w,p.y+2]];for(let x=p.x+p.w;x>=p.x;x-=12)inner.push([x,p.y+depth-6+(tall?0:Math.floor(noise(x,p.y)*7)-4)]);poly(ctx,inner,'#9aabb6');
+const inner=[[p.x,p.y+2],[p.x+p.w,p.y+2]];for(let x=p.x+p.w;x>=p.x;x-=12)inner.push([x,p.y+depth-6+(p.shapePiece||!tall?Math.floor(noise(x,p.y+depth)*7)-4:0)]);poly(ctx,inner,'#9aabb6');
 for(let x=p.x;x<p.x+p.w;x+=28){const w=Math.min(28,p.x+p.w-x),n=noise(x,p.y),d=tall?depth-8:14+n*8;poly(ctx,[[x,p.y+4],[x+w,p.y+3],[x+w-2,p.y+d-5],[x+w*.4,p.y+d],[x,p.y+d-3]],n>.5?'#c5cbc6':'#b3c0c5');poly(ctx,[[x,p.y+4],[x+w,p.y+3],[x+w-4,p.y+8],[x+3,p.y+9]],'#e1dfcc');
 if(w>10){poly(ctx,[[x+8,p.y+10],[x+13,p.y+14],[x+11,p.y+19],[x+14,p.y+23],[x+10,p.y+19],[x+11,p.y+14]],'#7c8d9f');rect(x+17,p.y+12,4,1,'#f0e8d6');}}
 if(tall)for(let yy=p.y+23;yy<p.y+depth-16;yy+=14)for(let x=p.x+2;x<p.x+p.w-9;x+=19){let n=noise(x,yy);rect(x,yy+n*5,7+n*8,2,n>.5?'#d8d9c9':'#8fa3b2');if(n>.7)rect(x+2,yy+6,3,2,'#6e879d');}
@@ -547,8 +550,8 @@ if(t<.8){rect(x,y+85*(1-t/.8),2,4,'#ffe7b2');return;}
 const age=t-.8,radius=age*23,fade=Math.max(0,1-age/2.6);ctx.save();ctx.globalAlpha=fade;
 for(let i=0;i<18;i++){const angle=i*Math.PI*2/18;for(let tail=0;tail<3;tail++){const r=Math.max(0,radius-tail*3);rect(x+Math.cos(angle)*r,y+Math.sin(angle)*r+age*age*5,tail?1:2,tail?1:2,colors[(cycle+i%2)%3]);}}
 ctx.restore();}
-function wildlife(){if(level===1)return;if(level===5){aquaparkBalloon();drawAquaLeaves();return;}if(level>=5)return;if(level===3){fireworks();return;}if(level===2){distantPlane();return;}const bats=level===1,count=bats?9:7;
-for(let i=0;i<count;i++){const speed=9+i*1.7,x=((i*139+time*speed-camera*.18)%(W+80)+W+80)%(W+80)-40,y=(bats?85:37)+(i*29)%(bats?115:90)+Math.sin(time*.75+i)*10,flap=Math.sin(time*(bats?10:6)+i)*5,scale=.65+(i%3)*.18;
+function wildlife(){if(level===1){caveBats();return;}if(level===5){aquaparkBalloon();drawAquaLeaves();return;}if(level>=5)return;if(level===3){fireworks();return;}if(level===2){distantPlane();return;}const bats=level===1,count=bats?3:3;
+for(let i=0;i<count;i++){const speed=9+i*1.7,x=((i*139+time*speed-camera*.18)%(W+80)+W+80)%(W+80)-40,y=(bats?65:37)+(i*29)%(bats?70:90)+Math.sin(time*.75+i)*10,flap=Math.sin(time*(bats?10:6)+i)*5,scale=.65+(i%3)*.18;
 ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);
 if(bats){poly(ctx,[[-2,0],[-15,-7-flap],[-12,1],[-8,-1],[-5,5],[0,3],[5,5],[8,-1],[12,1],[15,-7-flap],[2,0]],'#332942');poly(ctx,[[-2,0],[-12,-5-flap],[-7,0],[-4,3]],'#73576e');poly(ctx,[[2,0],[12,-5-flap],[7,0],[4,3]],'#73576e');oval(ctx,0,1,2.5,4,'#241f37');poly(ctx,[[-2,0],[-3,-5],[0,-2],[3,-5],[2,0]],'#30233c');}
 else{
@@ -585,12 +588,13 @@ for(let y=top+10;y<l.bottom-2;y+=11){rect(x+2,y,19,4,'#79758b');rect(x+3,y,17,1,
 function drawLadder(l){if(level===7||level===8){wornWoodLadder(l);return;}if(level>=5){poolLadder(l);return;}if(l.x<camera-25||l.x>camera+W+25)return;if(level===3){stoneLadder(l);return;}if(level===1){wornWoodLadder(l);return;}if(level===2){rustyMetalLadder(l);return;}const x=l.x-11,top=l.top-5,h=l.bottom-top;
 for(const rail of [x,x+20]){rect(rail-1,top,5,h,'#3b3440');rect(rail,top,3,h,level===1?'#94765a':'#ab744d');rect(rail,top,1,h,'#efc68b');for(let y=top+12;y<l.bottom;y+=26){rect(rail+1,y,1,8,'#654f46');rect(rail-1,y+8,5,3,'#53606a');rect(rail,y+8,1,1,'#d0d2bd');}}
 for(let y=top+10;y<l.bottom-2;y+=11){rect(x+3,y+1,17,4,'#463c43');rect(x+3,y,17,3,'#bd986c');rect(x+3,y,17,1,'#f0d1a0');rect(x+5,y+2,12,1,'#896341');}}
-function platformDetails(p){if(level>=5)return;if(level===0||level===2||level===3)return;const elevated=p.h<=20;
-if(level===1){
+function chalkMineralDetails(p){const elevated=p.h<=20;
 // Creamy mineral veins, flint nodules and coarse fractures replace uniform noise.
 for(let x=p.x+10;x<p.x+p.w-12;x+=37){let y=p.y+8+noise(x,p.y)*6;poly(ctx,[[x,y],[x+5,y-2],[x+10,y+1],[x+8,y+5],[x+3,y+6]],'#66738c');poly(ctx,[[x+1,y],[x+5,y-1],[x+8,y+1],[x+3,y+2]],'#a6afbb');rect(x+5,y+4,2,1,'#414f66');}
 if(!elevated)for(let x=p.x+13;x<p.x+p.w-17;x+=57){let y=p.y+29;poly(ctx,[[x,y],[x+10,y-4],[x+24,y],[x+30,y-2],[x+24,y+3],[x+10,y-1]],'#eee4c7');rect(x+10,y+1,8,1,'#8797a9');}
-return;}
+}
+function platformDetails(p){if(level>=5)return;if(level===0||level===2||level===3)return;const elevated=p.h<=20;
+if(level===1){chalkMineralDetails(p);return;}
 if(elevated&&Math.floor(p.x/180)%3===1){
 // Timber balcony deck: individual planks, end grain, iron straps and braces.
 rect(p.x,p.y+4,p.w,p.h-4,'#69494a');for(let x=p.x+1;x<p.x+p.w-4;x+=18){let w=Math.min(16,p.x+p.w-x);rect(x,p.y+5,w,9,'#ba8758');rect(x,p.y+5,w,1,'#f3c08a');rect(x+2,p.y+8,w-3,1,'#78533e');rect(x+5,p.y+10,4,2,'#956342');}
@@ -659,16 +663,16 @@ ctx.beginPath();ctx.rect(0,0,length,8);ctx.clip();platform({x:0,y:0,w:length,h:8
 function woodenExit(){const x=gateX(),open=collected===targetCount();
 rect(x+6,302,40,72,open?'#b8fa8766':'#163940aa');
 exitFrameBeam(x,301,73,true);exitFrameBeam(x+44,301,73,true);exitFrameBeam(x,295,52,false);
-label(open?['UNDERGROUND ↓','STAROSTWO →','THE SQUARE →','THE CROSSING →','AQUAPARK →','ZORZA →','PODZIEMIA →','PARK MIEJSKI →','THE END →'][level]:targetCount()+' '+itemNames[level]+' TO OPEN',x-30,286,open?'#caff79':'#f5efd6');
+label(open?['UNDERGROUND ↓','STAROSTWO →','THE SQUARE →','THE CROSSING →','AQUAPARK →','ZORZA →','PODZIEMIA →','PARK MIEJSKI →','FINAL CHAMBER →','THE END →'][level]:targetCount()+' '+itemNames[level]+' TO OPEN',x-30,286,open?'#caff79':'#f5efd6');
 }
-function draw(){if(level===4){drawRoad();return;}ctx.clearRect(0,0,W,H);rect(0,0,W,H,'#396879');if(level===1)caveBackground();if(level===0&&bg.complete&&bg.naturalWidth){drawTownBackground();}if(level===2&&officeArt.complete&&officeArt.naturalWidth)drawOfficeBackground();if(level===3&&plazaArt.complete&&plazaArt.naturalWidth)drawPlazaBackground();if(level===5&&aquaArt.complete&&aquaArt.naturalWidth)drawAquaBackground();if(level===6&&cinemaArt.complete&&cinemaArt.naturalWidth)drawCinemaBackground();if(level===7&&mineArt.complete&&mineArt.naturalWidth)drawMineBackground();if(level===8&&parkArt.complete&&parkArt.naturalWidth)drawParkBackground();wildlife();rect(0,0,W,H,'#112c440c');ctx.save();ctx.translate(-Math.round(camera),0);
+function draw(){if(level===9){drawFinale();return;}if(level===4){drawRoad();return;}ctx.clearRect(0,0,W,H);rect(0,0,W,H,'#396879');if(level===1)caveBackground();if(level===0&&bg.complete&&bg.naturalWidth){drawTownBackground();}if(level===2&&officeArt.complete&&officeArt.naturalWidth)drawOfficeBackground();if(level===3&&plazaArt.complete&&plazaArt.naturalWidth)drawPlazaBackground();if(level===5&&aquaArt.complete&&aquaArt.naturalWidth)drawAquaBackground();if(level===6&&cinemaArt.complete&&cinemaArt.naturalWidth)drawCinemaBackground();if(level===7&&mineArt.complete&&mineArt.naturalWidth)drawMineBackground();if(level===8&&parkArt.complete&&parkArt.naturalWidth)drawParkBackground();wildlife();rect(0,0,W,H,'#112c440c');ctx.save();ctx.translate(-Math.round(camera),0);
 for(const p of platforms)if(!p.street&&!p.shapePiece&&p.h>20&&p.x+p.w>camera-30&&p.x<camera+W+30)renderPlatform(p);
 drawPits();
 for(const l of ladders)drawLadder(l);for(const p of platforms)if(!p.street&&(p.shapePiece||p.h<=20)&&p.x+p.w>camera-30&&p.x<camera+W+30){renderPlatform(p);}
 
 ctx.save();if(level!==1)ctx.translate(0,26);checkpointFlag();woodenExit();ctx.restore();
 for(const r of rocks)if(!r.taken&&r.x>camera-20&&r.x<camera+W+20)gem(r);
-for(const g of ghosts())if(g.x>camera-40&&g.x<camera+W+40){if(g.kind==='ghost')ghost(g);else walker(g);}if(invincible<=0||Math.floor(time*12)%2===0)bear(player.x,player.y);for(const p of particles)rect(p.x,p.y,3,3,p.color);if(player.x<220)label('↑ / ↓ CLIMB · SPACE JUMP',140,337);ctx.restore();if(banner>0){label('LEVEL 0'+(level+1)+' / '+chapterNames[level],240,72);label(targetCount()+' '+itemNames[level]+' · HEARTS RESTORED',246,92);}if(state==='transition'){rect(0,0,W,H,'#101f29cc');label(['DESCENDING INTO THE CHALK UNDERGROUND...','NEXT STOP: STAROSTWO POWIATOWE...','NEXT STOP: PLAC ŁUCZKOWSKIEGO...','NEXT STOP: ACROSS CHEŁM...','NEXT STOP: AQUAPARK...','NEXT STOP: ZORZA CINEMA...','NEXT STOP: PODZIEMIA KREDOWE...','NEXT STOP: PARK MIEJSKI...'][level],240,210);}}
+for(const g of ghosts())if(g.x>camera-40&&g.x<camera+W+40){if(g.kind==='ghost')ghost(g);else walker(g);}if(invincible<=0||Math.floor(time*12)%2===0)bear(player.x,player.y);for(const p of particles)rect(p.x,p.y,3,3,p.color);ctx.restore();if(state==='transition'){rect(0,0,W,H,'#101f29cc');label(['DESCENDING INTO THE CHALK UNDERGROUND...','NEXT STOP: STAROSTWO POWIATOWE...','NEXT STOP: PLAC ŁUCZKOWSKIEGO...','NEXT STOP: ACROSS CHEŁM...','NEXT STOP: AQUAPARK...','NEXT STOP: ZORZA CINEMA...','NEXT STOP: PODZIEMIA KREDOWE...','NEXT STOP: PARK MIEJSKI...','FINAL STOP: THE CHALK GUARDIAN...'][level],240,210);}}
 let menuOpen=false,menuWasPlaying=false,clockStamp='';
 // Temporary direct entry points for testing each chapter.
 function updateDevLevelButtons(){for(const b of document.querySelectorAll('[data-dev-level]'))b.setAttribute('aria-pressed',String(Number(b.dataset.devLevel)===level));}
@@ -835,10 +839,10 @@ function drawRoad(){
  // Sidewalk greenery and street furniture stay outside the crossing route.
  for(const x of [10,27,741,758]){roadPlant(x,218);if(x<384){roadPlant(x,77);roadPlant(x,358);}}
  // Far-side bus shelter and finish pad.
- const ready=collected===targetCount();rect(618,66,112,18,ready?'#76a66d':'#647c88');rect(618,65,112,2,'#244c66');
- roadText(ready?'ALL ABOARD →':'BUS STOP',674,79,9,'#fff5d4','center');
+ const ready=collected===targetCount();rect(618,66,112,18,ready?roadExitPulse(time):'#647c88');rect(618,65,112,2,'#244c66');
+ if(ready){roadText('NEXT STOP',674,73,6,'#fff5d4','center');roadText(chapterNames[level+1],674,81,6,'#fff5d4','center');}else roadText('BUS STOP',674,79,9,'#fff5d4','center');
  rect(599,67,3,17,'#344753');rect(591,66,20,15,'#2d7592');rect(594,68,14,8,'#dae8d7');rect(596,69,10,4,'#35556c');rect(596,75,2,2,'#1d354a');rect(603,75,2,2,'#1d354a');
- roadText('CHEŁM · ACROSS CHEŁM',70,79,10,'#354a53');
+ 
  roadText(checkpoint?'MEDIAN · CHECKPOINT SAVED':'MEDIAN · SAFE TO WAIT',210,222,8,'#3a514f','center');
  // Sort by lane to keep all vehicle silhouettes readable.
  for(const v of roadTraffic){const c=roadVehicle(v);if(c.x+c.w<0||c.x>W)continue;const crop=roadSprites[c.type];
@@ -850,7 +854,7 @@ function drawRoad(){
  for(const r of rocks)if(!r.taken)roadTicket(r);
  if(invincible<=0||Math.floor(time*12)%2===0)bear(player.x,player.y);
  for(const p of particles){ctx.save();ctx.globalAlpha=Math.max(0,p.t/.5);rect(p.x,p.y,3,3,p.color);ctx.restore();}
- roadText('ARROWS / WASD · 10 MAPS',70,360,8,'#364e55');roadText('BIKES + SCOOTERS',575,360,8,'#364e55','center');
+ 
  if(state==='transition'){rect(0,0,W,H,'#101f29cc');label('NEXT STOP: CHEŁMSKI PARK WODNY...',225,210);}
  if(!roadArtReady())label('LOADING VEHICLES...',305,215);
  if(roadRow===8&&collected<targetCount())roadText('STILL NEED '+(targetCount()-collected)+' MAPS',350,79,8,'#9a462c','center');
@@ -906,7 +910,7 @@ cinemapark.rockPositions.push([x+24,y-24-(shaped?26:0)],[x+w-24,y-24-(u?26:0)]);
 for(const [i,p] of cinemapark.platforms.filter(p=>!p.travel&&p.w>=130).entries()){if(p.street){if(p.x===0)cinemapark.walkers.push({left:300,right:460,floor:400,speed:29,phase:.2,kind:'director'});else cinemapark.walkers.push({left:p.x+45,right:Math.min(p.x+p.w-60,p.x+205),floor:400,speed:30+i%3*4,phase:i*.17,kind:'director'});}else cinemapark.walkers.push({left:p.x+20,right:p.x+p.w-48,floor:p.y,speed:25+i%4*3,phase:i*.23,kind:'director'});}
 chapters.push(cinemapark);chapterNames.push('KINO ZORZA');itemNames.push('FILM REELS');itemColors.push('#c9e1f2');
 // The curb ends at source row 923; everything below it is scrolling road.
-function drawCinemaBackground(){const y=CINEMA_ROAD_Y,sy=cinemaArt.naturalHeight*y/H;ctx.drawImage(cinemaArt,0,0,cinemaArt.naturalWidth,sy,-Math.round(camera*(85/(WORLD-W))),0,860,y);drawGroundStrip(cinemaArt,y,860);}
+function drawCinemaBackground(){const y=CINEMA_ROAD_Y,sy=cinemaArt.naturalHeight*y/H;ctx.drawImage(cinemaArt,0,0,cinemaArt.naturalWidth,sy,-Math.round(camera*(85/(WORLD-W))),0,860,y);drawGroundStrip(cinemaArt,y,860);cinemaRoofBirds();}
 
 function trussPlatform(p){ctx.save();ctx.beginPath();ctx.rect(p.x,p.y,p.w,p.h);ctx.clip();
 // Open lattice: the background remains visible between the structural beams.
@@ -940,7 +944,7 @@ minepark.rockPositions.push([x+24,y-24-(shaped?26:0)],[x+w-24,y-24-(u?26:0)]);})
 for(const [i,p] of minepark.platforms.filter(p=>!p.travel&&p.w>=130).entries()){if(p.street){if(p.x===0)minepark.walkers.push({left:300,right:460,floor:400,speed:29,phase:.2,kind:'miner'});else minepark.walkers.push({left:p.x+45,right:Math.min(p.x+p.w-60,p.x+205),floor:400,speed:30+i%3*4,phase:i*.17,kind:'miner'});}else minepark.walkers.push({left:p.x+20,right:p.x+p.w-48,floor:p.y,speed:25+i%4*3,phase:i*.23,kind:'miner'});}
 chapters.push(minepark);chapterNames.push('PODZIEMIA KREDOWE');itemNames.push('TICKETS');itemColors.push('#ffe6a0');
 
-function drawMineBackground(){const y=MINE_GROUND_Y,sy=mineArt.naturalHeight*y/H;ctx.drawImage(mineArt,0,0,mineArt.naturalWidth,sy,-Math.round(camera*(85/(WORLD-W))),0,860,y);drawGroundStrip(mineArt,y,860);}
+function drawMineBackground(){const y=MINE_GROUND_Y,sy=mineArt.naturalHeight*y/H;ctx.drawImage(mineArt,0,0,mineArt.naturalWidth,sy,-Math.round(camera*(85/(WORLD-W))),0,860,y);drawGroundStrip(mineArt,y,860);entranceCats();}
 function mineBeam(p){ctx.save();ctx.beginPath();ctx.rect(p.x,p.y,p.w,p.h);ctx.clip();rect(p.x,p.y,p.w,p.h,'#55372c');
 // Heavy hewn timbers with grain, end-grain knots, pegged joints and iron straps.
 for(let y=p.y;y<p.y+p.h;y+=18){const h=Math.min(17,p.y+p.h-y);rect(p.x,y,p.w,h,'#936342');rect(p.x,y,p.w,2,'#c79763');rect(p.x,y+h-2,p.w,2,'#62412e');for(let x=p.x+8;x<p.x+p.w;x+=31){rect(x,y+5,20,1,'#b38353');rect(x+5,y+9,18,1,'#6d4932');rect(x+1,y+12,12,1,'#c08d59');}for(let x=p.x+41;x<p.x+p.w;x+=89){oval(ctx,x,y+9,5,2.5,'#6e4930');oval(ctx,x,y+8,3,1,'#b38150');}}
@@ -973,7 +977,7 @@ for(const [i,p] of parkpark.platforms.filter(p=>!p.travel&&p.w>=130).entries()){
 chapters.push(parkpark);chapterNames.push('PARK MIEJSKI');itemNames.push('LEAVES');itemColors.push('#b3d66c');
 
 
-function drawParkBackground(){const y=PARK_GROUND_Y,sy=parkArt.naturalHeight*y/H;ctx.drawImage(parkArt,0,0,parkArt.naturalWidth,sy,-Math.round(camera*(85/(WORLD-W))),0,860,y);drawGroundStrip(parkArt,y,860);}
+function drawParkBackground(){const y=PARK_GROUND_Y,sy=parkArt.naturalHeight*y/H;ctx.drawImage(parkArt,0,0,parkArt.naturalWidth,sy,-Math.round(camera*(85/(WORLD-W))),0,860,y);drawGroundStrip(parkArt,y,860);parkSquirrels();}
 function benchPlatform(p){ctx.save();ctx.beginPath();ctx.rect(p.x,p.y,p.w,p.h);ctx.clip();
 // Connected varnished bench slats, narrow gaps and black metal joining brackets.
 rect(p.x,p.y,p.w,p.h,'#253a3b');for(let y=p.y;y<p.y+p.h;y+=7){const h=Math.min(6,p.y+p.h-y);rect(p.x,y,p.w,h,'#a65b32');rect(p.x,y,p.w,1,'#f2ba76');rect(p.x,y+h-1,p.w,1,'#6e3f2b');for(let x=p.x+9;x<p.x+p.w;x+=35){rect(x,y+2,21,1,'#cb8550');rect(x+7,y+4,14,1,'#864929');}}
@@ -1157,13 +1161,16 @@ function spreadChapterPickups(){
  chapters.forEach((c,index)=>{
   if(index===4)return;
   const total=totals.pop(),groundCount=Math.round(total*.4);
+  // Alternate ground-first and ledge-first openings, with space after spawning.
+  const groundStart=[320,230,440,280,0,510,350,430,300][index];
+  const platformStart=[160,380,170,370,0,360,600,140,360][index];
   const ground=c.platforms.filter(p=>p.street||(!p.shapePiece&&p.h>20));
   // Treat every L/U as one ledge, so its separate collision pieces cannot
   // accidentally receive independent clusters packed next to one another.
   const groups=new Map();
   for(const p of c.platforms.filter(p=>!ground.includes(p))){const key=p.group||p;if(!groups.has(key))groups.set(key,[]);groups.get(key).push(p);}
   // Spread a first pickup across every ledge before adding well-separated pairs.
-  const ledges=shuffle([...groups.values()]);
+  const ledges=shuffle([...groups.values()].filter(pieces=>Math.min(...pieces.map(p=>p.x))>=platformStart));
   const extraSlots=shuffle(ledges.filter(pieces=>Math.max(...pieces.map(p=>p.x+p.w))-Math.min(...pieces.map(p=>p.x))>=125));
   const slots=[...ledges,...extraSlots],platformCount=total-groundCount;
   if(slots.length<platformCount)throw Error('Insufficient spacious platform slots');
@@ -1175,7 +1182,7 @@ function spreadChapterPickups(){
    for(const x of xs){const p=pieces.find(p=>x>=p.x&&x<p.x+p.w);c.rockPositions.push([x,p.y-24]);}
   }
   // At least 105 pixels between ground candidates; keep away from pit edges.
-  const floorSlots=shuffle(ground.flatMap(f=>{const items=[];for(let x=Math.max(85,f.x+55);x<Math.min(f.x+f.w-55,c.width-150);x+=125)items.push([x+(random()-.5)*20,f.y-26]);return items;}));
+  const floorSlots=shuffle(ground.flatMap(f=>{const items=[];for(let x=Math.max(groundStart,f.x+55);x<Math.min(f.x+f.w-55,c.width-150);x+=125)items.push([x+(random()-.5)*20,f.y-26]);return items;}));
   if(floorSlots.length<groundCount)throw Error('Insufficient safe ground pickup positions');
   // Sample evenly along the route rather than bunching ground items in one area.
   floorSlots.sort((a,b)=>a[0]-b[0]);
@@ -1187,5 +1194,186 @@ function spreadChapterPickups(){
  });
 }
 spreadChapterPickups();
+
+// A single-screen finale: eight stationary ledges, no ladders, timed chalk and a pit boss.
+const finaleArt=new Image();finaleArt.src='assets/final-chalk-chamber.png';
+const BOSS_PIT={x:W-96,w:96},BOSS_SIZE={w:96,h:108};
+let finaleWave=[],finaleWaveLeft=3,bossDefeated=false,bossGone=false,bossY=70,bossVelocity=0,victoryDismissed=false;
+const usedHeights=new Set(chapters.flatMap(c=>c.platforms.filter(p=>p.shapePiece||p.h<=20).map(p=>p.baseY??p.y)));
+// Uneven, stationary stepping routes; each upper ledge has a jumpable approach.
+const finaleLayout=[[38,328,90],[177,319,90],[82,249,82],[259,238,94],[337,333,90],[497,321,90],[424,256,86],[556,239,80]];
+const finaleLedges=finaleLayout.map(([x,y,w],finaleId)=>({x,y,w,h:16,finaleId}));
+const finale={width:W,platforms:[{x:0,y:400,w:BOSS_PIT.x,h:32,street:true},...finaleLedges],rockPositions:[],walkers:[],pits:[BOSS_PIT],ghostDefs:[{x:195,y:301,r:75,s:.83},{x:495,y:300,r:90,s:1.04},{x:260,y:214,r:95,s:.72},{x:540,y:213,r:70,s:.94},{x:155,y:255,r:45,s:1.19},{x:580,y:333,r:45,s:.91},{x:365,y:281,r:80,s:1.11},{x:415,y:205,r:95,s:.87}]};
+chapters.push(finale);chapterNames.push('THE CHALK GUARDIAN');itemNames.push('CHALK');itemColors.push('#f6f0db');
+function newFinaleWave(){
+ const candidates=finaleLedges.filter(p=>!finaleWave.includes(p.finaleId));
+ for(let i=candidates.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
+ const selected=candidates.slice(0,2);finaleWave=selected.map(p=>p.finaleId);finaleWaveLeft=3;
+ rocks=selected.map(p=>({x:p.x+p.w/2,y:p.y-24,taken:false,support:p,offsetX:p.w/2,animationPhase:p.finaleId*1.7}));
+}
+function resetFinale(){
+ bossDefeated=bossGone=victoryDismissed=false;bossY=70;bossVelocity=0;finaleWave=[];newFinaleWave();
+ player.x=48;player.y=370;player.ground=true;invincible=1.5;camera=0;ladders=[];hud();
+}
+function finaleGhosts(){return finale.ghostDefs.map((g,i)=>({x:g.x+Math.sin(time*g.s+i)*g.r,y:g.y+Math.sin(time*2+i)*9,w:26,h:29,kind:'ghost'}));}
+function winFinale(){
+ if(bossDefeated)return;bossDefeated=true;bossY=70+Math.sin(time*1.15)*9;bossVelocity=0;
+ rocks=[];releaseGameInput();stopMusic(true);state='boss-falling';syncMusic();
+}
+function updateFinale(dt){
+ if(state==='boss-falling'){
+  time+=dt;bossVelocity+=290*dt;bossY+=bossVelocity*dt;
+  if(bossY>H+12){bossGone=true;state='won';$('#kicker').textContent='CHEŁM · ADVENTURE COMPLETE';overlay('Congratulations!','The Chalk Guardian is gone. You completed all ten stages of The Lime Trail! Would you like to start again?','START AGAIN?');}
+  return;
+ }
+ if(state!=='playing')return;
+ time+=dt;elapsed+=dt;banner=Math.max(0,banner-dt);invincible=Math.max(0,invincible-dt);jumpBuffer=Math.max(0,jumpBuffer-dt);coyote=player.ground?.1:Math.max(0,coyote-dt);
+ moveLifts();movePlayer(dt);finaleWaveLeft-=dt;if(finaleWaveLeft<=0)newFinaleWave();
+ for(const r of rocks)if(!r.taken&&overlap(player,{x:r.x-7,y:r.y-9,w:14,h:18})){
+  r.taken=true;collected++;collectSound();burst(r.x,r.y,'#fff4d4');hud();if(collected>=10){winFinale();return;}
+ }
+ if(player.y>H+60){invincible=0;hit();}
+ else if(finaleGhosts().some(g=>overlap({x:player.x+3,y:player.y+3,w:16,h:25},{x:g.x+4,y:g.y+4,w:18,h:22}))||overlap(player,{x:BOSS_PIT.x+8,y:70+Math.sin(time*1.15)*9,w:BOSS_SIZE.w-16,h:BOSS_SIZE.h}))hit();
+ for(const p of particles){p.t-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=300*dt;}particles=particles.filter(p=>p.t>0);
+ camera=0;
+}
+function drawFinale(){
+ ctx.clearRect(0,0,W,H);rect(0,0,W,H,'#242f47');
+ if(finaleArt.complete&&finaleArt.naturalWidth)ctx.drawImage(finaleArt,0,0,W,H);
+ rect(0,0,W,H,'#17233c18');caveBats();
+ for(const p of finale.platforms.filter(p=>p.street))finaleChalkGround(p);
+ rect(BOSS_PIT.x,400,BOSS_PIT.w,H-400,'#0c1020');rect(BOSS_PIT.x,400,3,H-400,'#69788b');rect(BOSS_PIT.x+BOSS_PIT.w-3,400,3,H-400,'#4a586e');
+ for(const p of finaleLedges)renderPlatform(p);
+ if(!bossDefeated)for(const g of finaleGhosts())ghost(g);
+ if(!bossGone){
+  if(!sheetFrames.length)for(let i=0;i<6;i++)sheetFrames.push(makeSheet(i));
+  const y=bossDefeated?bossY:70+Math.sin(time*1.15)*9;
+  ctx.save();ctx.beginPath();ctx.rect(0,0,W,400);ctx.rect(BOSS_PIT.x,400,BOSS_PIT.w,H-400);ctx.clip();
+  ctx.drawImage(sheetFrames[Math.floor(time*5)%6],3,4,56,65,BOSS_PIT.x,y,BOSS_SIZE.w,BOSS_SIZE.h);ctx.restore();
+ }
+ for(const r of rocks)if(!r.taken){ctx.save();ctx.globalAlpha=finaleWaveLeft<.5?.65+.35*Math.sin(time*22):1;gem(r);ctx.restore();}
+ if(invincible<=0||lives===3||Math.floor(time*12)%2===0)bear(player.x,player.y);
+ for(const p of particles)rect(p.x,p.y,3,3,p.color);
+ if(!bossDefeated){label('CHALK '+collected+' / 10',18,23);label('NEXT CHALK '+finaleWaveLeft.toFixed(1)+'s',W-151,23);label('CHALK GUARDIAN',W-133,43);rect(W-106,50,100,6,'#152137');rect(W-104,52,96*(1-collected/10),2,'#d6e8ef');}
+
+}
+// Original seamless orchestral-chip loops: tense minor pursuit and major fanfare.
+function buildFinaleMusic(ac,victory=false){
+ if(!victory)return buildFinaleActionMusic(ac);
+ const rate=ac.sampleRate,beat=60/(victory?120:112),bars=16,n=Math.round(bars*4*beat*rate),buffer=ac.createBuffer(1,n,rate),out=buffer.getChannelData(0);
+ function note(m,start,dur,vol,voice=0){const hz=440*2**((m-69)/12),at=Math.round(start*beat*rate),hold=dur*beat,release=.16;
+  for(let j=0;j<(hold+release)*rate;j++){const t=j/rate,ph=2*Math.PI*hz*t,env=Math.min(1,t/(voice===1?.09:.025))*(t>hold?Math.max(0,1-(t-hold)/release)**2:1);
+   const wave=voice===0?(Math.sin(ph+.012*Math.sin(t*31))+.26*Math.sin(ph*2)+.08*Math.sin(ph*3)):voice===1?(Math.sin(ph)+.17*Math.sin(ph*3)):(Math.sin(ph)+.12*Math.sin(ph*2))*Math.exp(-t*2);
+   const v=wave*env*vol;out[(at+j)%n]+=v;out[(at+j+Math.round(beat*.75*rate))%n]+=v*.10;
+  }
+ }
+ const roots=victory?[48,53,55,48,57,53,55,48]:[50,46,43,45,50,48,46,45];
+ const themes=victory?[[72,76,79,84],[77,81,79,77],[79,83,86,83],[84,79,76,72],[81,84,88,84],[77,81,84,81],[79,83,86,79],[76,79,84,84]]:[[74,77,76,69],[70,74,77,74],[67,70,74,72],[73,76,81,76],[77,81,79,77],[72,76,79,76],[74,77,82,77],[73,76,81,73]];
+ for(let bar=0;bar<bars;bar++){
+  const at=bar*4,root=roots[bar%8],third=victory?4:bar%8===3||bar%8===7?4:3;
+  const melody=themes[bar%8];for(let k=0;k<4;k++)note(melody[k]+(bar>=8&&k===2?12:0),at+k,k===3?.85:.7,.011,0);
+  for(const tone of [root+12,root+12+third,root+19])note(tone,at,3.65,.0023,1);
+  for(let k=0;k<4;k++){note(root-12+(k%2?7:0),at+k,.7,.007,2);if(victory)note(root+12+[0,third,7,third][k],at+k+.5,.32,.003,2);}
+  // Rounded low drum, no piercing beeps or harsh noise.
+  for(const off of [0,2])for(let j=0;j<.22*rate;j++){const t=j/rate;out[(Math.round((at+off)*beat*rate)+j)%n]+=Math.sin(2*Math.PI*(75*t-90*t*t))*Math.exp(-t*22)*.012;}
+ }
+ return balanceMusic(buffer);
+}
+
+
+// "Guardian's March": a new, deliberately consonant D-minor boss theme.
+// Every lead note belongs to its current chord; no detuning, pitch bends or echo.
+const bossMarchChords=[[50,53,57],[46,50,53],[48,53,57],[48,52,55]];
+const bossMarchMelody=[
+ [[62,0,.8],[65,1,.65],[69,2,1.5]],
+ [[65,0,1.3],[62,1.5,.8],[58,3,.65]],
+ [[60,0,.8],[65,1,1.3],[69,2.5,.9]],
+ [[67,0,1.3],[64,1.5,.8],[60,3,.65]],
+ [[69,0,.8],[65,1,.65],[62,2,1.5]],
+ [[62,0,.8],[65,1,1.3],[62,2.5,.9]],
+ [[65,0,1.3],[69,1.5,.8],[65,3,.65]],
+ [[64,0,.8],[67,1,.65],[60,2,1.5]]];
+function buildFinaleActionMusic(ac){
+ const rate=ac.sampleRate,beat=60/112,n=Math.round(64*beat*rate),buffer=ac.createBuffer(1,n,rate),out=buffer.getChannelData(0);
+ function note(midi,start,beats,volume,kind){
+  const hz=440*2**((midi-69)/12),at=Math.round(start*beat*rate),duration=beats*beat;
+  for(let j=0;j<duration*rate;j++){
+   const t=j/rate,phase=2*Math.PI*hz*t;
+   const env=Math.min(1,t/(kind===2?.09:.025))*Math.min(1,(duration-t)/.075);
+   const wave=Math.sin(phase)+(kind===0?.1:kind===1?.15:.04)*Math.sin(phase*2);
+   out[(at+j)%n]+=wave*env*volume*(kind===1?Math.exp(-t*2):.85+.15*Math.exp(-t*3));
+  }
+ }
+ function drum(start,snare){const at=Math.round(start*beat*rate);let seed=at+4711,filtered=0;
+  for(let j=0;j<.16*rate;j++){const t=j/rate;seed=(Math.imul(seed,1664525)+1013904223)>>>0;filtered=filtered*.84+(seed/2147483648-1)*.16;
+   const wave=snare?filtered*.7+Math.sin(2*Math.PI*150*t)*.3:Math.sin(2*Math.PI*(72*t-80*t*t));
+   out[(at+j)%n]+=wave*Math.exp(-t*(snare?30:24))*(snare?.012:.018);
+  }
+ }
+ for(let bar=0;bar<16;bar++){
+  const at=bar*4,ch=bossMarchChords[bar%4];
+  for(const [m,t,d] of bossMarchMelody[bar%8])note(m,at+t,d,.013,0);
+  for(const m of ch)note(m,at+.05,3.75,.0025,2);
+  for(const [t,m] of [[0,ch[0]-12],[1.5,ch[2]-12],[2,ch[0]-12],[3,ch[2]-12]])note(m,at+t,.65,.009,1);
+  drum(at,false);drum(at+1,true);drum(at+2,false);drum(at+3,true);
+ }
+ return balanceMusic(buffer);
+}
+function caveBats(){
+ hangingBats();
+ for(let i=0;i<3;i++){
+  const speed=9+i*1.7,x=((i*139+time*speed-camera*.18)%(W+80)+W+80)%(W+80)-40,y=65+(i*29)%70+Math.sin(time*.75+i)*10,flap=Math.sin(time*10+i)*5,scale=.65+(i%3)*.18;
+  ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(scale,scale);
+  poly(ctx,[[-2,0],[-15,-7-flap],[-12,1],[-8,-1],[-5,5],[0,3],[5,5],[8,-1],[12,1],[15,-7-flap],[2,0]],'#332942');
+  poly(ctx,[[-2,0],[-12,-5-flap],[-7,0],[-4,3]],'#73576e');poly(ctx,[[2,0],[12,-5-flap],[7,0],[4,3]],'#73576e');oval(ctx,0,1,2.5,4,'#241f37');poly(ctx,[[-2,0],[-3,-5],[0,-2],[3,-5],[2,0]],'#30233c');ctx.restore();
+ }
+}
+function finaleChalkGround(p){
+ // Fit the complete 60px cave strata into the existing floor strip; collisions stay put.
+ ctx.save();ctx.translate(p.x,p.y);ctx.scale(1,p.h/60);ctx.beginPath();ctx.rect(0,0,p.w,60);ctx.clip();
+ const rock={x:0,y:0,w:p.w,h:60};chalkPlatform(rock);chalkMineralDetails(rock);ctx.restore();
+}
+
+function roadExitPulse(t){const mix=(1+Math.sin(t*1.8))/2;return 'rgb('+[100,124,136].map((v,i)=>Math.round(v+([118,166,109][i]-v)*mix)).join(',')+')';}
+function hangingBats(){
+ for(const [x,y] of [[182,32],[626,46]]){ctx.save();ctx.translate(x-(WORLD>W?Math.round(camera*(256/(WORLD-W))):0),y);
+  rect(-2,0,1,5,'#494151');rect(2,0,1,5,'#494151');
+  poly(ctx,[[-3,3],[-6,9],[-4,20],[0,23],[4,20],[6,9],[3,3]],'#342b43');
+  poly(ctx,[[-3,5],[-4,13],[0,19],[0,7]],'#62546b');poly(ctx,[[3,5],[4,13],[1,19],[1,7]],'#4a3e58');
+  oval(ctx,0,21,3.5,4,'#40324d');poly(ctx,[[-3,21],[-5,26],[-1,24],[1,24],[5,26],[3,21]],'#40324d');
+  rect(-2,22,1,1,'#b9a9b7');rect(2,22,1,1,'#b9a9b7');ctx.restore();
+ }
+}
+function backgroundAnimalSpace(draw){ctx.save();ctx.translate(-Math.round(camera*(85/(WORLD-W))),0);draw();ctx.restore();}
+function sittingWhiteBird(x,y,face){ctx.save();ctx.translate(x,y);ctx.scale(face,1);
+ rect(-3,-2,1,2,'#bb9577');rect(2,-2,1,2,'#bb9577');poly(ctx,[[-5,-4],[-11,-3],[-9,-1],[-3,-2]],'#aebdce');
+ oval(ctx,0,-6,6,4,'#dce5ec');oval(ctx,0,-7,5,3.5,'#fffdf0');poly(ctx,[[-4,-7],[2,-6],[3,-3],[-3,-4]],'#c3cfdb');
+ oval(ctx,4,-10,3,4,'#f6f7ed');oval(ctx,5,-13,3,3,'#fffef0');rect(6,-14,1,1,'#33475a');poly(ctx,[[7,-12],[11,-11],[7,-10]],'#b59872');ctx.restore();}
+function cinemaRoofBirds(){backgroundAnimalSpace(()=>{const y=208*H/1024;[242,553,934,1270].forEach((x,i)=>sittingWhiteBird(x*860/1536,y,i%3===0?-1:1));});}
+function sittingCat(x,y,tuxedo,face){ctx.save();ctx.translate(x,y);ctx.scale(face,1);
+ const dark=tuxedo?'#222938':'#9d5029',body=tuxedo?'#394355':'#d98b43',light=tuxedo?'#f5f1dd':'#f7c478';
+ // Curled tail, seated haunches, upright forelegs and distinct pointed ears.
+ ctx.strokeStyle=dark;ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(-3,-2);ctx.bezierCurveTo(-15,0,-13,-9,-10,-10);ctx.stroke();
+ oval(ctx,0,-7,6,7,dark);oval(ctx,1,-8,4.7,6.5,body);poly(ctx,[[-1,-12],[4,-12],[5,-1],[0,-1]],light);
+ rect(0,-5,2,5,body);rect(4,-5,2,5,body);rect(-1,-1,4,2,light);rect(3,-1,4,2,light);
+ oval(ctx,1,-17,6,5,body);poly(ctx,[[-5,-18],[-5,-25],[0,-21],[4,-21],[7,-25],[7,-17]],dark);
+ poly(ctx,[[-4,-20],[-4,-23],[-1,-20]],'#d99d91');poly(ctx,[[4,-20],[6,-23],[6,-19]],'#d99d91');
+ if(tuxedo)poly(ctx,[[1,-21],[-1,-16],[1,-13],[4,-15]],light);
+ else{rect(-3,-20,2,3,dark);rect(1,-21,2,3,dark);rect(4,-20,2,3,dark);rect(-3,-9,3,2,dark);rect(-4,-5,3,2,dark);}
+ rect(-2,-17,2,1,'#d7e899');rect(4,-17,2,1,'#d7e899');rect(1,-15,2,1,'#d89391');
+ rect(-6,-14,4,1,'#e3d1b8');rect(4,-14,5,1,'#e3d1b8');ctx.restore();}
+function entranceCats(){backgroundAnimalSpace(()=>{sittingCat(1194*860/1536,302*H/1024,false,1);sittingCat(1315*860/1536,302*H/1024,true,-1);});}
+function squirrelSprite(x,y,face,phase){ctx.save();ctx.translate(Math.round(x),Math.round(y));ctx.scale(face*.8,.8);
+ const stride=Math.sin(phase)*2;
+ // Tall curled brush tail makes the small background silhouette recognisable.
+ oval(ctx,-8,-11,5.5,9,'#804020');oval(ctx,-9,-13,4,6,'#d2853b');oval(ctx,-10,-15,2.5,3.5,'#efb66b');
+ oval(ctx,0,-5,7,4.5,'#ad592a');oval(ctx,1,-6,5,3,'#d38b43');oval(ctx,5,-8,3.5,3.5,'#b76832');
+ poly(ctx,[[3,-10],[3,-15],[6,-11],[8,-13],[8,-8]],'#925027');rect(6,-9,1,1,'#211e23');rect(8,-7,2,1,'#362b28');
+ rect(-3+stride,-2,4,2,'#6e3e28');rect(4-stride,-2,4,2,'#6e3e28');rect(3,-5,4,1,'#edc58c');ctx.restore();}
+function parkSquirrels(){backgroundAnimalSpace(()=>{
+ const a=time*.52,b=time*.39+2;
+ squirrelSprite(306+Math.sin(a)*48,263,Math.cos(a)>=0?1:-1,time*13);
+ squirrelSprite(650+Math.sin(b)*62,282,Math.cos(b)>=0?1:-1,time*12+1);
+});}
 
 loadLevel(0);requestAnimationFrame(frame);
