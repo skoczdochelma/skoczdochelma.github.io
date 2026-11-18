@@ -1,9 +1,0 @@
-Grass/Dead Grass Platformer Tileset by PROWNE
-https://opengameart.org/content/grassdead-grass-platformer-tileset
-License: CC0 1.0 (public-domain dedication)
-https://creativecommons.org/publicdomain/zero/1.0/
-Original Spritesheet.png included as assets/grass-tiles.png; grass/dirt tiles rendered at 2x with nearest-neighbor sampling.
-
-Cobblestone: Seamless Cobblestone - Retro low resolution, by Tegurd, based on a photo texture by Drummyfish. CC0.
-https://opengameart.org/content/seamless-cobblestone-retro-low-resolution
-Original texture included as assets/cobblestone.png.
