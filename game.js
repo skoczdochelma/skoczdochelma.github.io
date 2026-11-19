@@ -6295,7 +6295,6 @@ function woodenExit() {
   exitFrameBeam(x, 301, 73, true);
   exitFrameBeam(x + 44, 301, 73, true);
   exitFrameBeam(x, 295, 52, false);
-
 }
 function draw() {
   if (level === 9) {
@@ -6367,7 +6366,7 @@ function draw() {
   ctx.restore();
   if (state === "transition") {
     rect(0, 0, W, H, "#101f29cc");
-    label("NEXT STOP: " + chapterNames[nextStage()] + "...", 180, 210);
+    label("NASTĘPNY ETAP: " + chapterNames[nextStage()] + "...", 180, 210);
   }
 }
 let menuOpen = false,
@@ -6461,14 +6460,18 @@ function updateWorldSigns() {
   const open = collected === targetCount();
   worldSigns.classList.toggle("road-signs", road);
   checkpointSign.hidden = road;
-  checkpointSign.style.left = (road ? 210 : WORLD / 2 - Math.round(camera)) / W * 100 + "%";
-  passageSign.style.left = (road ? 674 : gateX() + 26 - Math.round(camera)) / W * 100 + "%";
+  checkpointSign.style.left =
+    ((road ? 210 : WORLD / 2 - Math.round(camera)) / W) * 100 + "%";
+  passageSign.style.left =
+    ((road ? 674 : gateX() + 26 - Math.round(camera)) / W) * 100 + "%";
   for (const line of checkpointSign.children) {
-    line.hidden = line.dataset.kind !== (road ? "road" : "flag") ||
+    line.hidden =
+      line.dataset.kind !== (road ? "road" : "flag") ||
       line.dataset.saved !== String(checkpoint);
   }
   for (const line of passageSign.children) {
-    line.hidden = line.dataset.kind !== (road ? "road" : "gate") ||
+    line.hidden =
+      line.dataset.kind !== (road ? "road" : "gate") ||
       line.dataset.open !== String(open);
   }
   if (passageSign.dataset.stage !== String(level)) {
@@ -6682,10 +6685,12 @@ function showInfo(kind) {
     const logo = new Image(300, 120);
     logo.src = "SkoczDoChelma_logo_min.png";
     logo.alt = "Skocz do Chełma";
-    logo.style.cssText = "display:block;width:auto;height:auto;max-width:100%;max-height:min(120px,16vh)";
+    logo.style.cssText =
+      "display:block;width:auto;height:auto;max-width:100%;max-height:min(120px,16vh)";
     kicker.replaceChildren(logo);
   } else {
-    kicker.textContent = "POZIOM " + stageNumber() + " - " + chapterNames[level];
+    kicker.textContent =
+      "POZIOM " + stageNumber() + " - " + chapterNames[level];
   }
   $("#infoTitle").textContent = kind === "help" ? "Jak grać" : "O grze";
   $("#infoText").textContent = kind === "help" ? levelHelp[level] : aboutText;
@@ -7446,10 +7451,17 @@ function drawRoad() {
   }
   // Paint the editable median wording beneath the traffic and player sprites.
   const medianMessage = checkpointSign.querySelector(
-    '[data-kind="road"][data-saved="' + checkpoint + '"]'
+    '[data-kind="road"][data-saved="' + checkpoint + '"]',
   );
   if (medianMessage) {
-    roadText(medianMessage.textContent.trim(), 210, 222, 12, "#3a514f", "center");
+    roadText(
+      medianMessage.textContent.trim(),
+      210,
+      222,
+      12,
+      "#3a514f",
+      "center",
+    );
   }
   // Far-side bus shelter and finish pad.
   const ready = collected === targetCount();
@@ -7462,7 +7474,6 @@ function drawRoad() {
   rect(596, 69, 10, 4, "#35556c");
   rect(596, 75, 2, 2, "#1d354a");
   rect(603, 75, 2, 2, "#1d354a");
-
 
   // Sort by lane to keep all vehicle silhouettes readable.
   for (const v of roadTraffic) {
@@ -7505,7 +7516,7 @@ function drawRoad() {
 
   if (state === "transition") {
     rect(0, 0, W, H, "#101f29cc");
-    label("NEXT STOP: " + chapterNames[nextStage()] + "...", 225, 210);
+    label("NASTĘPNY ETAP: " + chapterNames[nextStage()] + "...", 225, 210);
   }
   if (!roadArtReady()) label("LOADING VEHICLES...", 305, 215);
 }
