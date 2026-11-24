@@ -6658,7 +6658,7 @@ const levelHelp = [
   "Zbierz rolki filmu, których pilnują reżyserowie. Gdy będziesz mieć już wszystkie rolki, skieruj się do przejścia na kolejny poziom.",
   "Zbierz bilety przed wejściem do podziemi, wystrzegaj się kredowych górników. Gdy będziesz mieć już wszystkie bilety, skieruj się do przejścia na kolejny poziom.",
   "Zbierz liście w parku, łobuzy w szeleszczących ubraniach nie będą przychylni. Użyj drabinek, aby dostać się na platformy. Gdy będziesz mieć już wszystkie liście, skieruj się do przejścia na kolejny poziom.",
-  "Zbierz kredowe fragmenty, aby pokonać Strażnika podziemi. Co 3 sekundy jeden fragment pojawia się na innej platformie. Nie stój zbyt długo w jednym miejscu, bo duchy zaczną się do ciebie zbliżać.",
+  "Zbierz kredowe fragmenty, aby pokonać Strażnika podziemi. Co 3 sekundy fragment pojawia się na innej platformie, z dala od misia. Gdy miś dłużej stoi w miejscu, duchy zaczynają się do niego zbliżać.",
 ];
 const aboutText =
   "Kod, grafika i muzyka są dziełem ChatGPT. Pomysł, prompty oraz spory z AI przypadają jednoosobowemu zespołowi, czyli mnie (MK). Interfejs to wspólny wysiłek człowieka i maszyny, natomiast teksty, jakkolwiek skromne, są wytworem wyłącznie ludzkim. Dziękuję wszystkim, którzy dobrowolnie obcowali z grą, zmuszonych proszę o wybaczenie.";
@@ -9772,9 +9772,14 @@ chapters.push(finale);
 chapterNames.push("STRAŻNIK PODZIEMI");
 itemNames.push("FRAGMENTY KREDY");
 itemColors.push("#f6f0db");
+// Wider than a full finale ledge, including the bear at either edge.
+const finaleRoamingDistance = 128;
+
 function newFinaleWave() {
+  const bearCenter = player.x + player.w / 2;
   const candidates = finaleLedges.filter(
-    (p) => !finaleWave.includes(p.finaleId),
+    (p) => !finaleWave.includes(p.finaleId) &&
+      Math.abs(p.x + p.w / 2 - bearCenter) > finaleRoamingDistance,
   );
   for (let i = candidates.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -9797,9 +9802,9 @@ function resetFinale() {
   bossY = 70;
   bossVelocity = 0;
   finaleWave = [];
-  newFinaleWave();
   player.x = 48;
   player.y = 370;
+  newFinaleWave();
   resetFinalePatrol();
   player.ground = true;
   invincible = 1.5;
@@ -9827,7 +9832,6 @@ function resetFinalePatrol() {
 }
 
 function updateFinalePatrol(dt) {
-  // Small shuffles on the same perch still count as lingering.
   if (Math.abs(player.x - campX) > 40 || Math.abs(player.y - campY) > 60) {
     campX = player.x;
     campY = player.y;
