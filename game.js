@@ -1757,6 +1757,7 @@ function hit() {
   climbing = false;
   climbCooldown = 0.3;
   invincible = 2;
+  if (level === 9) resetFinalePatrol();
 }
 function ghosts() {
   if (level === 1)
@@ -6295,6 +6296,7 @@ function woodenExit() {
   exitFrameBeam(x, 301, 73, true);
   exitFrameBeam(x + 44, 301, 73, true);
   exitFrameBeam(x, 295, 52, false);
+
 }
 function draw() {
   if (level === 9) {
@@ -6366,7 +6368,7 @@ function draw() {
   ctx.restore();
   if (state === "transition") {
     rect(0, 0, W, H, "#101f29cc");
-    label("NASTĘPNY ETAP: " + chapterNames[nextStage()] + "...", 180, 210);
+    label("NEXT STOP: " + chapterNames[nextStage()] + "...", 180, 210);
   }
 }
 let menuOpen = false,
@@ -6460,18 +6462,14 @@ function updateWorldSigns() {
   const open = collected === targetCount();
   worldSigns.classList.toggle("road-signs", road);
   checkpointSign.hidden = road;
-  checkpointSign.style.left =
-    ((road ? 210 : WORLD / 2 - Math.round(camera)) / W) * 100 + "%";
-  passageSign.style.left =
-    ((road ? 674 : gateX() + 26 - Math.round(camera)) / W) * 100 + "%";
+  checkpointSign.style.left = (road ? 210 : WORLD / 2 - Math.round(camera)) / W * 100 + "%";
+  passageSign.style.left = (road ? 674 : gateX() + 26 - Math.round(camera)) / W * 100 + "%";
   for (const line of checkpointSign.children) {
-    line.hidden =
-      line.dataset.kind !== (road ? "road" : "flag") ||
+    line.hidden = line.dataset.kind !== (road ? "road" : "flag") ||
       line.dataset.saved !== String(checkpoint);
   }
   for (const line of passageSign.children) {
-    line.hidden =
-      line.dataset.kind !== (road ? "road" : "gate") ||
+    line.hidden = line.dataset.kind !== (road ? "road" : "gate") ||
       line.dataset.open !== String(open);
   }
   if (passageSign.dataset.stage !== String(level)) {
@@ -6660,7 +6658,7 @@ const levelHelp = [
   "Zbierz rolki filmu, których pilnują reżyserowie. Gdy będziesz mieć już wszystkie rolki, skieruj się do przejścia na kolejny poziom.",
   "Zbierz bilety przed wejściem do podziemi, wystrzegaj się kredowych górników. Gdy będziesz mieć już wszystkie bilety, skieruj się do przejścia na kolejny poziom.",
   "Zbierz liście w parku, łobuzy w szeleszczących ubraniach nie będą przychylni. Użyj drabinek, aby dostać się na platformy. Gdy będziesz mieć już wszystkie liście, skieruj się do przejścia na kolejny poziom.",
-  "Zbierz kredowe fragmenty, aby pokonać Strażnika podziemi. Co 3 sekundy dwa fragmenty pojawiają się w różnych miejscach. Unikaj pomocników strażnika i przepędź go na zawsze.",
+  "Zbierz kredowe fragmenty, aby pokonać Strażnika podziemi. Co 3 sekundy jeden fragment pojawia się na innej platformie. Nie stój zbyt długo w jednym miejscu, bo duchy zaczną się do ciebie zbliżać.",
 ];
 const aboutText =
   "Kod, grafika i muzyka są dziełem ChatGPT. Pomysł, prompty oraz spory z AI przypadają jednoosobowemu zespołowi, czyli mnie (MK). Interfejs to wspólny wysiłek człowieka i maszyny, natomiast teksty, jakkolwiek skromne, są wytworem wyłącznie ludzkim. Dziękuję wszystkim, którzy dobrowolnie obcowali z grą, zmuszonych proszę o wybaczenie.";
@@ -6685,12 +6683,10 @@ function showInfo(kind) {
     const logo = new Image(300, 120);
     logo.src = "SkoczDoChelma_logo_min.png";
     logo.alt = "Skocz do Chełma";
-    logo.style.cssText =
-      "display:block;width:auto;height:auto;max-width:100%;max-height:min(120px,16vh)";
+    logo.style.cssText = "display:block;width:auto;height:auto;max-width:100%;max-height:min(120px,16vh)";
     kicker.replaceChildren(logo);
   } else {
-    kicker.textContent =
-      "POZIOM " + stageNumber() + " - " + chapterNames[level];
+    kicker.textContent = "POZIOM " + stageNumber() + " - " + chapterNames[level];
   }
   $("#infoTitle").textContent = kind === "help" ? "Jak grać" : "O grze";
   $("#infoText").textContent = kind === "help" ? levelHelp[level] : aboutText;
@@ -7451,17 +7447,10 @@ function drawRoad() {
   }
   // Paint the editable median wording beneath the traffic and player sprites.
   const medianMessage = checkpointSign.querySelector(
-    '[data-kind="road"][data-saved="' + checkpoint + '"]',
+    '[data-kind="road"][data-saved="' + checkpoint + '"]'
   );
   if (medianMessage) {
-    roadText(
-      medianMessage.textContent.trim(),
-      210,
-      222,
-      12,
-      "#3a514f",
-      "center",
-    );
+    roadText(medianMessage.textContent.trim(), 210, 222, 12, "#3a514f", "center");
   }
   // Far-side bus shelter and finish pad.
   const ready = collected === targetCount();
@@ -7474,6 +7463,7 @@ function drawRoad() {
   rect(596, 69, 10, 4, "#35556c");
   rect(596, 75, 2, 2, "#1d354a");
   rect(603, 75, 2, 2, "#1d354a");
+
 
   // Sort by lane to keep all vehicle silhouettes readable.
   for (const v of roadTraffic) {
@@ -7516,7 +7506,7 @@ function drawRoad() {
 
   if (state === "transition") {
     rect(0, 0, W, H, "#101f29cc");
-    label("NASTĘPNY ETAP: " + chapterNames[nextStage()] + "...", 225, 210);
+    label("NEXT STOP: " + chapterNames[nextStage()] + "...", 225, 210);
   }
   if (!roadArtReady()) label("LOADING VEHICLES...", 305, 215);
 }
@@ -9790,7 +9780,7 @@ function newFinaleWave() {
     const j = Math.floor(Math.random() * (i + 1));
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
-  const selected = candidates.slice(0, 2);
+  const selected = candidates.slice(0, 1);
   finaleWave = selected.map((p) => p.finaleId);
   finaleWaveLeft = 3;
   rocks = selected.map((p) => ({
@@ -9810,13 +9800,17 @@ function resetFinale() {
   newFinaleWave();
   player.x = 48;
   player.y = 370;
+  resetFinalePatrol();
   player.ground = true;
   invincible = 1.5;
   camera = 0;
   ladders = [];
   hud();
 }
-function finaleGhosts() {
+let activeFinaleGhosts = [];
+let campX, campY, campTime;
+
+function finalePatrolPositions() {
   return finale.ghostDefs.map((g, i) => ({
     x: g.x + Math.sin(time * g.s + i) * g.r,
     y: g.y + Math.sin(time * 2 + i) * 9,
@@ -9825,6 +9819,34 @@ function finaleGhosts() {
     kind: "ghost",
   }));
 }
+function resetFinalePatrol() {
+  activeFinaleGhosts = finalePatrolPositions();
+  campX = player.x;
+  campY = player.y;
+  campTime = 0;
+}
+
+function updateFinalePatrol(dt) {
+  // Small shuffles on the same perch still count as lingering.
+  if (Math.abs(player.x - campX) > 40 || Math.abs(player.y - campY) > 60) {
+    campX = player.x;
+    campY = player.y;
+    campTime = 0;
+  }
+  campTime += dt;
+  const routes = finalePatrolPositions();
+  activeFinaleGhosts.forEach((g, i) => {
+    const chasing = campTime >= 2.5 + i * 0.18;
+    const angle = i * Math.PI / 4;
+    const dx = chasing ? player.x + 8 * Math.cos(angle) - g.x : routes[i].x - g.x;
+    const dy = chasing ? player.y + 7 * Math.sin(angle) - g.y : routes[i].y - g.y;
+    const speed = chasing ? 88 + i * 4 : 120;
+    const step = Math.min(1, speed * dt / (Math.hypot(dx, dy) || 1));
+    g.x += dx * step;
+    g.y += dy * step;
+  });
+}
+
 function winFinale() {
   if (bossDefeated) return;
   bossDefeated = true;
@@ -9862,6 +9884,7 @@ function updateFinale(dt) {
   coyote = player.ground ? 0.1 : Math.max(0, coyote - dt);
   moveLifts();
   movePlayer(dt);
+  updateFinalePatrol(dt);
   finaleWaveLeft -= dt;
   if (finaleWaveLeft <= 0) newFinaleWave();
   for (const r of rocks)
@@ -9880,7 +9903,7 @@ function updateFinale(dt) {
     invincible = 0;
     hit();
   } else if (
-    finaleGhosts().some((g) =>
+    activeFinaleGhosts.some((g) =>
       overlap(
         { x: player.x + 3, y: player.y + 3, w: 16, h: 25 },
         { x: g.x + 4, y: g.y + 4, w: 18, h: 22 },
@@ -9916,7 +9939,7 @@ function drawFinale() {
   rect(BOSS_PIT.x, 400, 3, H - 400, "#69788b");
   rect(BOSS_PIT.x + BOSS_PIT.w - 3, 400, 3, H - 400, "#4a586e");
   for (const p of finaleLedges) renderPlatform(p);
-  if (!bossDefeated) for (const g of finaleGhosts()) ghost(g);
+  if (!bossDefeated) for (const g of activeFinaleGhosts) ghost(g);
   if (!bossGone) {
     if (!sheetFrames.length)
       for (let i = 0; i < 6; i++) sheetFrames.push(makeSheet(i));
